@@ -1,0 +1,34 @@
+package modelo.efectos;
+
+import java.awt.image.BufferedImage;
+
+public class EfectoNegativo implements IEfecto{
+
+    @Override
+    public BufferedImage aplicar(BufferedImage buffer1) {
+        int ancho, alto, pixel, pixelNuevo;
+        int r, g, b;
+        ancho = buffer1.getWidth();
+        alto = buffer1.getHeight();
+
+        BufferedImage buffer2 = new BufferedImage(ancho, alto, BufferedImage.TYPE_INT_RGB);
+
+        for (int y = 0; y < alto; y++) {
+            for (int x = 0; x < ancho; x++) {
+
+                pixel = buffer1.getRGB(x, y);
+                r = (pixel >> 16) & 0xFF;
+                g = (pixel >> 8) & 0xFF;
+                b = (pixel >> 0) & 0xFF;
+
+                r = (255 - r);
+                g = (255 - g);
+                b = (255 - b);
+
+                pixelNuevo = (r << 16) | (g << 8) | (b << 0);
+                buffer2.setRGB(x, y, pixelNuevo);
+            }
+        }
+        return buffer2;
+    }
+}
