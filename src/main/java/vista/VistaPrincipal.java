@@ -1,5 +1,6 @@
 package vista;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
@@ -8,15 +9,7 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Slider;
-import javafx.scene.control.TitledPane;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
@@ -30,18 +23,22 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import modelo.histogramas.HistoPanelComponent;
 import modelo.histogramas.Histograma;
 import modelo.kernels.Kernels;
 import modelo.matrizColores.Matrizes;
+import util.ConversorImagen;
+
+import javax.imageio.ImageIO;
 
 public class VistaPrincipal {
 
-    private static final String COLOR_FONDO = "#FFFFCC";
-    private static final String COLOR_PANEL = "#FEE187";
-    private static final String COLOR_BORDE = "#FEAB49";
-    private static final String COLOR_TEXTO = "#400013";
-    private static final String COLOR_TEXTO_SUAVE = "#800026";
-    private static final String COLOR_ACENTO = "#D41020";
+    private static final String COLOR_FONDO = "#FFFFFF";
+    private static final String COLOR_PANEL = "#FFD100";
+    private static final String COLOR_BORDE = "#D1D1D1";
+    private static final String COLOR_TEXTO = "#000000";
+    private static final String COLOR_TEXTO_SUAVE = "#555555";
+    private static final String COLOR_ACENTO = "#003A70";
 
     private static final int ANCHO_PANEL_GRANDE = 310;
     private static final int ANCHO_PANEL_MEDIANO = 200;
@@ -118,10 +115,10 @@ public class VistaPrincipal {
     private void aplicarModoGrande() {
         // Barra: texto completo
         titulo.setFont(Font.font("System", FontWeight.BOLD, 18));
-        titulo.setText("Grupo 4");
-        btnCargar.setText("📂  Cargar imagen");
-        btnGuardar.setText("💾  Guardar");
-        btnRestaurar.setText("↩  Restaurar");
+        titulo.setText("Bienvenido");
+        btnCargar.setText("Cargar imagen");
+        btnGuardar.setText("Guardar");
+        btnRestaurar.setText("Restaurar");
         lblNombreArchivo.setVisible(true);
         lblNombreArchivo.setManaged(true);
 
@@ -262,18 +259,31 @@ public class VistaPrincipal {
 
         acordeon.getPanes().addAll(
                 panelDuplicar(),
+                panelDegradadoHorizontal(),
+                panelDegradadoVertical(),
+                panelDegradadoRadialSimple(),
+                panelGradienteRadial(),
                 panelImagenPersonalizada(),
                 panelEscalaGrises(),
                 panelNegativo(),
+                panelVidrio(),
+                panelDesvanecimiento(),
+                panelDesvanecimientoCircular(),
+                panelRetroSepia(),
+                panelRetroPersonalizado(),
                 panelBrillo(),
                 panelModeloHsv(),
                 panelRecorteBits(),
                 panelBlancoNegro(),
                 panelReducirColor(),
                 panelGananciaColor(),
-                panelConvolucion(),
+                panelConvolucionOpti(),
+                panelConvolucionManual(),
                 panelMatrizColores(),
-                panelHistograma());
+                panelBlending(),
+                panelBlending3(),
+                panelHistograma(),
+                panelEcualizador());
 
         panelEfectos = new ScrollPane(acordeon);
         panelEfectos.setFitToWidth(true);
@@ -283,6 +293,23 @@ public class VistaPrincipal {
                 + "-fx-border-color: " + COLOR_BORDE + ";"
                 + "-fx-border-width: 0 1 0 0;");
         return panelEfectos;
+    }
+
+    // Estos métodos van en tu clase VistaPrincipal
+    private TitledPane panelDegradadoHorizontal() {
+        return panelDegradadoLineal("Degradado Horizontal", "H");
+    }
+
+    private TitledPane panelDegradadoVertical() {
+        return panelDegradadoLineal("Degradado Vertical", "V");
+    }
+
+    private TitledPane panelDegradadoRadialSimple() {
+        return panelDegradadoRadial("Degradado Radial", false);
+    }
+
+    private TitledPane panelGradienteRadial() {
+        return panelDegradadoRadial("Gradiente Radial", true);
     }
 
     // Área de imágenes
@@ -341,6 +368,33 @@ public class VistaPrincipal {
         return barra;
     }
 
+    private BufferedImage abrirSelectorDeArchivos() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Imágenes", "*.jpg", "*.png", "*.jpeg")
+        );
+
+        File selectedFile = fileChooser.showOpenDialog(null); // 'null' o tu 'Stage' principal
+
+        if (selectedFile != null) {
+            try {
+                return ImageIO.read(selectedFile);
+            } catch (IOException e) {
+                System.err.println("Error al cargar la imagen: " + e.getMessage());
+            }
+        }
+        return null; // Si el usuario cancela o hay error
+    }
+
+    private java.awt.Color convertirColor(javafx.scene.paint.Color colorFx) {
+        return new java.awt.Color(
+                (float) colorFx.getRed(),
+                (float) colorFx.getGreen(),
+                (float) colorFx.getBlue(),
+                (float) colorFx.getOpacity()
+        );
+    }
+
     // Paneles de efectos
 
     private TitledPane panelDuplicar() {
@@ -351,6 +405,57 @@ public class VistaPrincipal {
         btn.setOnAction(e -> aplicarEfecto(() -> controlador.aplicarDuplicado(), "Duplicado"));
         cuerpo.getChildren().addAll(desc, btn);
         return titledPane("Duplicado", cuerpo);
+    }
+
+    private TitledPane panelDegradadoLineal(String titulo, String tipo) {
+        VBox cuerpo = new VBox(10);
+        cuerpo.setPadding(new Insets(10));
+
+        ColorPicker cp1 = new ColorPicker(Color.BLACK);
+        ColorPicker cp2 = new ColorPicker(Color.WHITE);
+        Button btn = crearBotonEfecto("Aplicar " + titulo);
+
+        btn.setOnAction(e -> {
+            java.awt.Color c1 = convertirColor(cp1.getValue());
+            java.awt.Color c2 = convertirColor(cp2.getValue());
+
+            if (tipo.equals("H")) {
+                aplicarEfecto(() -> controlador.aplicarDegradadoHorizontal(c1, c2), "Degradado H");
+            } else {
+                aplicarEfecto(() -> controlador.aplicarDegradadoVertical(c1, c2), "Degradado V");
+            }
+        });
+
+        cuerpo.getChildren().addAll(new Label("Color Inicio:"), cp1, new Label("Color Fin:"), cp2, btn);
+        return titledPane(titulo, cuerpo);
+    }
+
+    private TitledPane panelDegradadoRadial(String titulo, boolean conRadio) {
+        VBox cuerpo = new VBox(10);
+        cuerpo.setPadding(new Insets(10));
+
+        ColorPicker cpCentro = new ColorPicker(Color.YELLOW);
+        ColorPicker cpBorde = new ColorPicker(Color.RED);
+        Slider sliderRadio = new Slider(0.1, 1.0, 0.5); // Solo para el GradienteRadial
+
+        Button btn = crearBotonEfecto("Aplicar");
+
+        btn.setOnAction(e -> {
+            java.awt.Color c1 = convertirColor(cpCentro.getValue());
+            java.awt.Color c2 = convertirColor(cpBorde.getValue());
+
+            if (conRadio) {
+                aplicarEfecto(() -> controlador.aplicarGradienteRadial(c1, c2, (float)sliderRadio.getValue()), "Gradiente Radial");
+            } else {
+                aplicarEfecto(() -> controlador.aplicarDegradadoRadial(c1, c2), "Degradado Radial");
+            }
+        });
+
+        cuerpo.getChildren().addAll(new Label("Centro:"), cpCentro, new Label("Borde:"), cpBorde);
+        if(conRadio) cuerpo.getChildren().addAll(new Label("Radio:"), sliderRadio);
+        cuerpo.getChildren().add(btn);
+
+        return titledPane(titulo, cuerpo);
     }
 
     private TitledPane panelImagenPersonalizada() {
@@ -385,6 +490,60 @@ public class VistaPrincipal {
         btn.setOnAction(e -> aplicarEfecto(() -> controlador.aplicarNegativo(), "Negativo"));
         cuerpo.getChildren().addAll(desc, btn);
         return titledPane("Negativo", cuerpo);
+    }
+
+    private TitledPane panelVidrio() {
+        VBox cuerpo = new VBox(10);
+        cuerpo.setPadding(new Insets(12));
+        Label desc = etiquetaDescripcion("Aplica un efecto de distorsión de vidrio.");
+        Button btn = crearBotonEfecto("Aplicar Vidrio");
+        btn.setOnAction(e -> aplicarEfecto(() -> controlador.aplicarVidrio(), "Vidrio"));
+        cuerpo.getChildren().addAll(desc, btn);
+        return titledPane("Efecto Vidrio", cuerpo);
+    }
+
+    private TitledPane panelDesvanecimiento() {
+        VBox cuerpo = new VBox(10);
+        cuerpo.setPadding(new Insets(12));
+        Label desc = etiquetaDescripcion("Aplica un efecto de desvanecimiento lineal.");
+        Button btn = crearBotonEfecto("Aplicar Desvanecimiento");
+        btn.setOnAction(e -> aplicarEfecto(() -> controlador.aplicarDesvanecimiento(), "Desvanecimiento"));
+        cuerpo.getChildren().addAll(desc, btn);
+        return titledPane("Desvanecimiento", cuerpo);
+    }
+
+    private TitledPane panelDesvanecimientoCircular() {
+        VBox cuerpo = new VBox(10);
+        cuerpo.setPadding(new Insets(12));
+
+        Label desc = etiquetaDescripcion("Aplica un desvanecimiento radial desde el centro.");
+        Button btn = crearBotonEfecto("Aplicar Desvanecimiento Circular");
+
+        btn.setOnAction(e -> aplicarEfecto(() -> controlador.aplicarDesvanecimientoCircular(), "Desvanecimiento Circular"));
+
+        cuerpo.getChildren().addAll(desc, btn);
+        return titledPane("Desvanecimiento Circular", cuerpo);
+    }
+
+    private TitledPane panelRetroSepia() {
+        VBox cuerpo = new VBox(10);
+        cuerpo.setPadding(new Insets(12));
+        Label desc = etiquetaDescripcion("Efecto fotográfico estilo retro sepia.");
+        Button btn = crearBotonEfecto("Aplicar Retro Sepia");
+        btn.setOnAction(e -> aplicarEfecto(() -> controlador.aplicarRetroSepia(), "Retro Sepia"));
+        cuerpo.getChildren().addAll(desc, btn);
+        return titledPane("Retro 1", cuerpo);
+    }
+
+    private TitledPane panelRetroPersonalizado() {
+        VBox cuerpo = new VBox(10);
+        cuerpo.setPadding(new Insets(12));
+        Label desc = etiquetaDescripcion("Efecto retro con reducción de colores.");
+        // Aquí, si necesitas capturar el valor (como el '8' de antes), podrías usar un TextField o Slider
+        Button btn = crearBotonEfecto("Aplicar Retro");
+        btn.setOnAction(e -> aplicarEfecto(() -> controlador.aplicarRetro(8), "Retro"));
+        cuerpo.getChildren().addAll(desc, btn);
+        return titledPane("Retro 2", cuerpo);
     }
 
     private TitledPane panelBrillo() {
@@ -522,7 +681,7 @@ public class VistaPrincipal {
         return titledPane("Ganancia de Color", cuerpo);
     }
 
-    private TitledPane panelConvolucion() {
+    private TitledPane panelConvolucionOpti() {
         VBox cuerpo = new VBox(10);
         cuerpo.setPadding(new Insets(12));
         Label desc = etiquetaDescripcion("Aplica un kernel de convolución 3×3 N veces consecutivas.");
@@ -544,7 +703,27 @@ public class VistaPrincipal {
                 e -> aplicarEfecto(() -> controlador.aplicarConvolucion(combo.getValue(), (int) sPasadas.getValue()),
                         "Convolución: " + combo.getValue().getEtiqueta()));
         cuerpo.getChildren().addAll(desc, lblKernel, combo, lblP, sPasadas, btn);
-        return titledPane("Convolución", cuerpo);
+        return titledPane("Convolución Multiples Opciones", cuerpo);
+    }
+
+    private TitledPane panelConvolucionManual() {
+        VBox cuerpo = new VBox(10);
+        cuerpo.setPadding(new Insets(12));
+
+        // Descripción simple
+        Label desc = etiquetaDescripcion("Aplica el algoritmo de convolución 9x9 implementado manualmente.");
+
+        // Botón directo
+        Button btn = crearBotonEfecto("Aplicar Convolución Manual");
+
+        // Llamada directa al nuevo método del controlador
+        btn.setOnAction(e -> aplicarEfecto(
+                () -> controlador.aplicarConvolucionManual(),
+                "Convolución Manual 9x9"
+        ));
+
+        cuerpo.getChildren().addAll(desc, btn);
+        return titledPane("Convolución Manual", cuerpo);
     }
 
     private TitledPane panelMatrizColores() {
@@ -566,6 +745,44 @@ public class VistaPrincipal {
         return titledPane("Matriz de Colores", cuerpo);
     }
 
+    private TitledPane panelBlending() {
+        VBox cuerpo = new VBox(10);
+        cuerpo.setPadding(new Insets(12));
+        Label desc = etiquetaDescripcion("Combina dos imágenes mediante un blend secuencial al 50%.");
+        Button btn = crearBotonEfecto("Seleccionar imagen y aplicar Blending");
+
+        btn.setOnAction(e -> {
+            // Aquí abrirías el FileChooser para obtener la segunda imagen
+            BufferedImage img2 = abrirSelectorDeArchivos();
+            if(img2 != null) {
+                aplicarEfecto(() -> controlador.aplicarBlending(img2, 0.7f), "Blending");
+            }
+        });
+
+        cuerpo.getChildren().addAll(desc,btn);
+        return titledPane("Blending", cuerpo);
+    }
+
+    private TitledPane panelBlending3() {
+        VBox cuerpo = new VBox(10);
+        cuerpo.setPadding(new Insets(12));
+        Label desc = etiquetaDescripcion("Combina tres imágenes mediante un blend secuencial al 50%.");
+        Button btn = crearBotonEfecto("Seleccionar 2 imágenes y aplicar");
+
+        btn.setOnAction(e -> {
+            // Podrías abrir el selector dos veces
+            BufferedImage img2 = abrirSelectorDeArchivos();
+            if(img2 != null) {
+                BufferedImage img3 = abrirSelectorDeArchivos();
+                if(img3 != null) {
+                    aplicarEfecto(() -> controlador.aplicarBlending3(img2, img3), "Blending x3");
+                }
+            }
+        });
+        cuerpo.getChildren().addAll(desc,btn);
+        return titledPane("Blending x3", cuerpo);
+    }
+
     private TitledPane panelHistograma() {
         VBox cuerpo = new VBox(10);
         cuerpo.setPadding(new Insets(12));
@@ -583,6 +800,37 @@ public class VistaPrincipal {
                         "Histograma: " + combo.getValue()));
         cuerpo.getChildren().addAll(desc, lblKernel, combo, btn);
         return titledPane("Histogramas", cuerpo);
+    }
+
+    private TitledPane panelEcualizador() {
+        VBox cuerpo = new VBox(10);
+        HistoPanelComponent histoCanvas = new HistoPanelComponent();
+        Slider slider = crearSlider(0, 1.0, 0);
+
+        slider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            // 1. Ejecutar el procesamiento
+            controlador.aplicarEcualizacionDirecta(newVal.floatValue());
+
+            // 2. OBTENER EL BUFFER
+            BufferedImage imgResult = controlador.getImagenActual();
+
+            if (imgResult != null) {
+                // 3. ¡EL TRUCO!
+                // Convertimos a FX y obligamos al ImageView a actualizarse
+                javafx.scene.image.Image nuevaImagenFX = ConversorImagen.aImagenJavaFX(imgResult);
+
+                Platform.runLater(() -> {
+                    vistaResultado.setImage(null); // Borra la referencia actual
+                    vistaResultado.setImage(nuevaImagenFX); // Asigna la nueva
+
+                    // 4. Redibujar histograma
+                    histoCanvas.getGraphicsContext2D().clearRect(0, 0, histoCanvas.getWidth(), histoCanvas.getHeight());
+                    histoCanvas.dibujarHistograma(imgResult);
+                });
+            }
+        });
+        cuerpo.getChildren().addAll(new Label("Factor Ecualización:"), slider, histoCanvas);
+        return titledPane("Ecualización Histograma", cuerpo);
     }
 
     // Acciones
@@ -718,3 +966,4 @@ public class VistaPrincipal {
                 + "; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 7 16 7 16;";
     }
 }
+

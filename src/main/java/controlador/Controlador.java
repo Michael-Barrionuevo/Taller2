@@ -1,5 +1,6 @@
 package controlador;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -7,17 +8,8 @@ import java.io.IOException;
 import javafx.scene.image.Image;
 import modelo.ModeloPrincipal;
 import modelo.convolucion.EfectoConvolucion;
-import modelo.efectos.Duplicado;
-import modelo.efectos.EfectoBlancoNegro;
-import modelo.efectos.EfectoBrillo;
-import modelo.efectos.EfectoEscalaGrises;
-import modelo.efectos.EfectoGananciaColor;
-import modelo.efectos.EfectoNegativo;
-import modelo.efectos.EfectoRetro;
-import modelo.efectos.IEfecto;
-import modelo.efectos.ImagenPersonalizada;
-import modelo.efectos.ModeloHsv;
-import modelo.efectos.RecorteBits;
+import modelo.efectos.*;
+import modelo.histogramas.EcualizadorHistograma;
 import modelo.histogramas.Histograma;
 import modelo.kernels.Kernels;
 import modelo.matrizColores.MatrizColores;
@@ -52,8 +44,42 @@ public class Controlador {
     /** Restaura la imagen */
     public Image restaurarOriginal() {
         modelo.restaurarOriginal();
+
+        // FORZAMOS LA SINCRONIZACIÓN:
+        // Aseguramos que el resultado sea igual a la original tras restaurar
+        BufferedImage original = modelo.getImagenOriginal();
+        BufferedImage copia = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_INT_RGB);
+        Graphics g = copia.getGraphics();
+        g.drawImage(original, 0, 0, null);
+        g.dispose();
+        modelo.setImagenResultado(copia);
+
         return ConversorImagen.aImagenJavaFX(modelo.getImagenResultado());
     }
+
+    public BufferedImage getImagenActual() {
+        return modelo.getImagenResultado();
+    }
+
+    public void aplicarEcualizacionDirecta(float factor) {
+        BufferedImage original = modelo.getImagenOriginal();
+        if (original == null) return;
+
+        // 1. Si no existe el lienzo, créalo
+        if (modelo.getImagenResultado() == null) {
+            BufferedImage copia = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_INT_RGB);
+            modelo.setImagenResultado(copia);
+        }
+
+        BufferedImage resultado = modelo.getImagenResultado();
+
+        // 2. Procesar sobre el buffer ya existente
+        EcualizadorHistograma eq = new EcualizadorHistograma(original);
+        eq.procesar(original, resultado, factor);
+
+    }
+
+
 
     public boolean hayImagenCargada() {
         return modelo.hayImagenCargada();
@@ -82,6 +108,50 @@ public class Controlador {
     public Image aplicarNegativo() {
         return aplicar(new EfectoNegativo());
     }
+
+    /** Aplica efecto de distorsión tipo vidrio */
+    public Image aplicarVidrio() {
+        return aplicar(new EfectoVidrio());
+    }
+
+    /** Aplica efecto de desvanecimiento lineal */
+    public Image aplicarDesvanecimiento() {
+        return aplicar(new EfectoDesvanecimiento());
+    }
+
+    /** Aplica efecto de desvanecimiento circular */
+    public Image aplicarDesvanecimientoCircular() {
+        return aplicar(new EfectoDesvanecimientoCircular());
+    }
+
+    /** Aplica efecto retro estilo sepia */
+    public Image aplicarRetroSepia() {
+        return aplicar(new EfectoRetro2());
+    }
+
+    /** Aplica el efecto retro con nivel personalizado */
+    public Image aplicarRetro(int valor) {
+        return aplicar(new EfectoRetro(valor));
+    }
+
+    /** Aplica el efecto Degradado Horizontal*/
+    public Image aplicarDegradadoHorizontal(Color inicio, Color fin) {
+        return aplicar(new EfectoDegradadoHorizontal(inicio, fin));
+    }
+    /** Aplica el efecto Degradado Vertical*/
+    public Image aplicarDegradadoVertical(Color inicio, Color fin) {
+        return aplicar(new EfectoDegradadoVertical(inicio, fin));
+    }
+
+    /** Aplica el efecto Degradado Radial*/
+    public Image aplicarDegradadoRadial(Color centro, Color borde) {
+        return aplicar(new EfectoDegradadoRadial(centro, borde));
+    }
+    /** Aplica el efecto Degradado Gradiente Radial*/
+    public Image aplicarGradienteRadial(Color centro, Color borde, float radio) {
+        return aplicar(new EfectoGradienteRadial(centro, borde, radio));
+    }
+
 
     /* Brillo */
     public Image aplicarBrillo(int brillo) {
@@ -118,6 +188,12 @@ public class Controlador {
         return aplicar(new EfectoConvolucion(kernel, pasadas));
     }
 
+    /** Convolución Manual 9x9 */
+    public Image aplicarConvolucionManual() {
+        return aplicar(new modelo.convolucion.EfectoConvolucionManual());
+    }
+
+
     /** Matriz de colores */
     public Image aplicarMatrizColores(Matrizes.NombreMatriz matriz){
         return aplicar(new MatrizColores(matriz));
@@ -126,6 +202,16 @@ public class Controlador {
     /** Matriz de colores */
     public Image aplicarHistograma(Histograma.TipoHistograma color){
         return aplicar(new Histograma(color));
+    }
+
+    /** Blending */
+    public Image aplicarBlending(BufferedImage segundaImagen, float alpha) {
+        return aplicar(new EfectoBlending(segundaImagen, alpha));
+    }
+
+    /** Blending x 3*/
+    public Image aplicarBlending3(BufferedImage img2, BufferedImage img3) {
+        return aplicar(new EfectoBlending3(img2, img3));
     }
 
     private Image aplicar(IEfecto efecto) {
